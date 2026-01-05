@@ -1,6 +1,9 @@
 package pubsub
 
-import amqp "github.com/rabbitmq/amqp091-go"
+import (
+	"github.com/jthughes/peril/internal/routing"
+	amqp "github.com/rabbitmq/amqp091-go"
+)
 
 type SimpleQueueType int
 
@@ -21,7 +24,7 @@ func DeclareAndBind(
 	if err != nil {
 		return nil, amqp.Queue{}, err
 	}
-	queue, err := ch.QueueDeclare(queueName, queueType == Durable, queueType == Transient, queueType == Transient, false, nil)
+	queue, err := ch.QueueDeclare(queueName, queueType == Durable, queueType == Transient, queueType == Transient, false, amqp.Table{"x-dead-letter-exchange": routing.ExchangePerilDeadLetter})
 	if err != nil {
 		return nil, amqp.Queue{}, err
 	}
