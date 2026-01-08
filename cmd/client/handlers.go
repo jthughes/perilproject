@@ -41,20 +41,32 @@ func handlerMove(gs *gamelogic.GameState, publishCh *amqp.Channel) func(gamelogi
 	}
 }
 
-func handlerWar(gs *gamelogic.GameState) func(rw gamelogic.RecognitionOfWar) pubsub.AckType {
+func handlerWar(gs *gamelogic.GameState, ch *amqp.Channel) func(rw gamelogic.RecognitionOfWar) pubsub.AckType {
 	return func(rw gamelogic.RecognitionOfWar) pubsub.AckType {
 		defer fmt.Print("> ")
-		outcome, _, _ := gs.HandleWar(rw)
+		outcome, winner, loser := gs.HandleWar(rw)
 		switch outcome {
 		case gamelogic.WarOutcomeNotInvolved:
 			return pubsub.MsgNackRequeue
 		case gamelogic.WarOutcomeNoUnits:
 			return pubsub.MsgNackDiscard
 		case gamelogic.WarOutcomeOpponentWon:
+			err := pubsub.PublishGameLog(ch, rw.Attacker.Username, fmt.Sprintf("%s won a war against %s", winner, loser))
+			if err != nil {
+				return pubsub.MsgNackRequeue
+			}
 			return pubsub.MsgAck
 		case gamelogic.WarOutcomeYouWon:
+			err := pubsub.PublishGameLog(ch, rw.Attacker.Username, fmt.Sprintf("%s won a war against %s", winner, loser))
+			if err != nil {
+				return pubsub.MsgNackRequeue
+			}
 			return pubsub.MsgAck
 		case gamelogic.WarOutcomeDraw:
+			err := pubsub.PublishGameLog(ch, rw.Attacker.Username, fmt.Sprintf("A war between %s and %s resulted in a draw", winner, loser))
+			if err != nil {
+				return pubsub.MsgNackRequeue
+			}
 			return pubsub.MsgAck
 		default:
 			fmt.Printf("Unrecognised outcome: %v\n", outcome)

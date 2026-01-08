@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
 	"strings"
 
 	"github.com/jthughes/peril/internal/gamelogic"
@@ -29,11 +27,20 @@ func main() {
 		return
 	}
 
-	_, _, err = pubsub.DeclareAndBind(connection, routing.ExchangePerilTopic, routing.GameLogSlug, fmt.Sprintf("%s.*", routing.GameLogSlug), pubsub.Durable)
+	logHandler := func(gl routing.GameLog) pubsub.AckType {
+		defer fmt.Print("> ")
+		gamelogic.WriteLog(gl)
+		return pubsub.MsgAck
+	}
+
+	err = pubsub.SubscribeGob(connection, routing.ExchangePerilTopic, routing.GameLogSlug, fmt.Sprintf("%s.*", routing.GameLogSlug), pubsub.Durable, logHandler)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	gamelogic.PrintServerHelp()
-	inMenu := true
-	for inMenu {
+	for {
 		input := gamelogic.GetInput()
 		switch strings.ToLower(input[0]) {
 		case "pause":
@@ -42,14 +49,10 @@ func main() {
 			pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: false})
 		case "quit":
 			fmt.Println("Exiting...")
-			inMenu = false
+			return
 		default:
 			fmt.Println("Command not recognised")
 		}
 	}
 
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
-	fmt.Println("Closing connection and shutting down")
 }
