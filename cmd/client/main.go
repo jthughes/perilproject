@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jthughes/peril/internal/gamelogic"
@@ -42,8 +43,7 @@ func main() {
 
 	pubsub.SubscribeJSON(connection, routing.ExchangePerilTopic, routing.WarRecognitionsPrefix, fmt.Sprintf("%s.*", routing.WarRecognitionsPrefix), pubsub.Durable, handlerWar(state, ch))
 
-	inMenu := true
-	for inMenu {
+	for {
 		input := gamelogic.GetInput()
 		switch strings.ToLower(input[0]) {
 		case "spawn":
@@ -66,11 +66,21 @@ func main() {
 		case "help":
 			gamelogic.PrintClientHelp()
 		case "spam":
-			fmt.Println("Spamming not allowed yet!")
-
+			if len(input) != 2 {
+				fmt.Println("usage: spam <number>")
+				continue
+			}
+			count, err := strconv.Atoi(input[1])
+			if err != nil || count <= 0 {
+				fmt.Println("usage: spam <number>\n (number > 0)")
+			}
+			for _ = range count {
+				log := gamelogic.GetMaliciousLog()
+				pubsub.PublishGameLog(ch, username, log)
+			}
 		case "quit":
 			gamelogic.PrintQuit()
-			inMenu = false
+			return
 		default:
 			fmt.Println("Command not recognised")
 		}

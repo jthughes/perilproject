@@ -42,6 +42,9 @@ func main() {
 	gamelogic.PrintServerHelp()
 	for {
 		input := gamelogic.GetInput()
+		if len(input) < 1 {
+			continue
+		}
 		switch strings.ToLower(input[0]) {
 		case "pause":
 			pubsub.PublishJSON(ch, routing.ExchangePerilDirect, routing.PauseKey, routing.PlayingState{IsPaused: true})

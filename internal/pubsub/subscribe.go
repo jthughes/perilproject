@@ -17,6 +17,10 @@ const (
 	MsgNackDiscard
 )
 
+const (
+	PrefetchCount = 10
+)
+
 func SubscribeJSON[T any](
 	conn *amqp.Connection,
 	exchange,
@@ -29,6 +33,7 @@ func SubscribeJSON[T any](
 	if err != nil {
 		return fmt.Errorf("could not declare and bind queue: %v", err)
 	}
+	ch.Qos(PrefetchCount, 0, false)
 	chDelivery, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("could not consume messages: %v", err)
@@ -75,6 +80,7 @@ func SubscribeGob[T any](
 	if err != nil {
 		return fmt.Errorf("could not declare and bind queue: %v", err)
 	}
+	ch.Qos(PrefetchCount, 0, false)
 	chDelivery, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("could not consume messages: %v", err)
